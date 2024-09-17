@@ -1,0 +1,15 @@
+[package]
+name = "p9n_interface_2024"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+safe_drive = "0.4"
+drobo_interfaces = { path = "/tmp/p9n_interface/drobo_interfaces" }
+
+[package.metadata.ros]
+msg = ["drobo_interfaces"]
+msg_dir = "/tmp/p9n_interface/"
+safe_drive_version = "0.4"
