@@ -444,11 +444,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
 
 [[patch.unused]]
-name = "controller_2023"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "differential_two_wheel_control"
+name = "dmotor_ros"
 version = "0.1.0"
 
 [[patch.unused]]
@@ -457,4 +453,8 @@ version = "0.1.0"
 
 [[patch.unused]]
 name = "p9n_interface_2024"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "spring_extension_sensing"
 version = "0.1.0"

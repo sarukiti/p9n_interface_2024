@@ -101,7 +101,7 @@ fn worker(
                 if robot_num == 0 {
                     sd_msg.address = 0x00;
                     sd_msg.port = 0;
-                    sd_msg.power1 = 1;
+                    sd_msg.power1 = 1000;
                     let _ = sd_publisher.send(&sd_msg);
                 } else if robot_num == 2 {
                     robot2_2_msg.md0 = if !p9n.pressed_cross() {1000} else {-1000};
@@ -127,7 +127,7 @@ fn worker(
                 if robot_num == 0 {
                     sd_msg.address = 0x00;
                     sd_msg.port = 1;
-                    sd_msg.power1 = 1;
+                    sd_msg.power1 = 1000;
                     let _ = sd_publisher.send(&sd_msg);
                 } else if robot_num == 2 {
                     robot2_2_msg.md1 = if !p9n.pressed_cross() {1000} else {-1000};
@@ -193,8 +193,8 @@ fn worker(
                     if !dualsense_state[DualsenseState::D_PAD_UP] {
                         md_msg.address = 0x05;
                         md_msg.mode = 2;
-                        md_msg.phase = false;
-                        md_msg.power = 500;
+                        md_msg.phase = p9n.pressed_cross();
+                        md_msg.power = 1000;
                         let _ = md_publisher.send(&md_msg);
                     }
                 } else if robot_num == 1 {
@@ -218,10 +218,9 @@ fn worker(
                     md_msg.phase = false;
                     md_msg.power = 0;
                     let _ = md_publisher.send(&md_msg);
-
                     sd_msg.address = 0x05;
                     sd_msg.port = 0;
-                    sd_msg.power1 = 1;
+                    sd_msg.power1 = 1000;
                     let _ = sd_publisher.send(&sd_msg);
                 } else if robot_num == 1 {
                     robot2_1_msg.md2 = 0;
