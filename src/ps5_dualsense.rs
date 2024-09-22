@@ -9,6 +9,7 @@ pub mod AXES_DUALSENSE {
     pub const DPAD_X: usize = 6;
     pub const DPAD_Y: usize = 7;
 }
+#[allow(non_snake_case,non_upper_case_globals)]
 pub mod BUTTONS_DUALSENSE {
     pub const CROSS: usize = 0;
     pub const CIRCLE: usize = 1;
