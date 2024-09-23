@@ -75,14 +75,6 @@ fn worker(
                 sd_msg.power1 = 1000;
                 let _ = sd_publisher.send(&sd_msg);
             } 
-            if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
-                pr_info!(logger, "reverse left");
-                dualsense_state[DualsenseState::D_PAD_LEFT] = false;
-                sd_msg.address = 0x00;
-                sd_msg.port = 0;
-                sd_msg.power1 = 0;
-                let _ = sd_publisher.send(&sd_msg);
-            }
             if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT]{
                 pr_info!(logger, "right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
@@ -98,6 +90,10 @@ fn worker(
                 sd_msg.port = 1;
                 sd_msg.power1 = 0;
                 let _ = sd_publisher.send(&sd_msg);
+                sd_msg.port = 0;
+                sd_msg.power1 = 0;
+                let _ = sd_publisher.send(&sd_msg);
+
             }
             if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP]{
                 pr_info!(logger, "up");

@@ -63,7 +63,7 @@ fn worker(
         Box::new(move |_msg| {
             p9n.set_joy_msg(_msg.get_owned().unwrap());
 
-            if p9n.pressed_dpad_left(){
+            if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT] {
                 pr_info!(logger, "left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = true;
                 robot2_2_msg.md0 = if !p9n.pressed_cross() {1000} else {-1000};
@@ -87,7 +87,7 @@ fn worker(
                 robot2_2_msg.md1 = 0;
                 let _ = robot2_2_publisher.send(&robot2_2_msg);
             }
-            if p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP]{
+            if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP]{
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
                 robot2_2_msg.md2 = if !p9n.pressed_cross() {127} else {-128};
