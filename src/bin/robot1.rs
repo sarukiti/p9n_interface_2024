@@ -62,19 +62,26 @@ fn worker(
     let mut md_msg = MdLibMsg::new().unwrap();
     let mut sd_msg = SdLibMsg::new().unwrap();
 
+    let mut exhaust_solenoid_power = 0;
+
     selector.add_subscriber(
         subscriber,
         Box::new(move |_msg| {
             p9n.set_joy_msg(_msg.get_owned().unwrap());
 
-            if p9n.pressed_dpad_left(){
+            if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT]{
                 pr_info!(logger, "left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = true;
+                exhaust_solenoid_power = if exhaust_solenoid_power == 0 {1000} else {0};
                 sd_msg.address = 0x00;
                 sd_msg.port = 0;
-                sd_msg.power1 = 1000;
+                sd_msg.power1 = exhaust_solenoid_power;
                 let _ = sd_publisher.send(&sd_msg);
             } 
+            if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT]{
+                pr_info!(logger, "reverse left");
+                dualsense_state[DualsenseState::D_PAD_LEFT] = false;
+            }
             if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT]{
                 pr_info!(logger, "right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
@@ -91,7 +98,8 @@ fn worker(
                 sd_msg.power1 = 0;
                 let _ = sd_publisher.send(&sd_msg);
                 sd_msg.port = 0;
-                sd_msg.power1 = 0;
+                exhaust_solenoid_power = 0;
+                sd_msg.power1 = exhaust_solenoid_power;
                 let _ = sd_publisher.send(&sd_msg);
 
             }
