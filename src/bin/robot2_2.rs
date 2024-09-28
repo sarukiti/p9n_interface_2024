@@ -68,7 +68,7 @@ fn worker(
                 dualsense_state[DualsenseState::L2] = true;
                 robot2_2_msg.md0 = if !p9n.pressed_cross() {1000} else {-1000};
                 let _ = robot2_2_publisher.send(&robot2_2_msg);
-            } 
+            }
             if !p9n.pressed_l2() && dualsense_state[DualsenseState::L2] {
                 pr_info!(logger, "reverse L2");
                 dualsense_state[DualsenseState::L2] = false;
@@ -126,7 +126,7 @@ fn worker(
             if p9n.pressed_square() && !dualsense_state[DualsenseState::SQUARE] {
                 pr_info!(logger, "square");
                 dualsense_state[DualsenseState::SQUARE] = true;
-                robot2_2_msg.md3 = if robot2_2_msg.md3 <= 0 {127} else {-128};
+                robot2_2_msg.md3 = if !p9n.pressed_cross() {127} else {-128};
                 let _ = robot2_2_publisher.send(&robot2_2_msg);
             }
             if !p9n.pressed_square() && dualsense_state[DualsenseState::SQUARE] {
@@ -136,7 +136,7 @@ fn worker(
             if p9n.pressed_triangle() && !dualsense_state[DualsenseState::TRIANGLE] {
                 pr_info!(logger, "triangle");
                 dualsense_state[DualsenseState::TRIANGLE] = true;
-                robot2_2_msg.md5 = if robot2_2_msg.md5 <= 0 {127} else {-128};
+                robot2_2_msg.md5 = if !p9n.pressed_cross() {127} else {-128};
                 let _ = robot2_2_publisher.send(&robot2_2_msg);
             }
             if !p9n.pressed_triangle() && dualsense_state[DualsenseState::TRIANGLE] {
@@ -146,7 +146,7 @@ fn worker(
             if p9n.pressed_circle() && !dualsense_state[DualsenseState::CIRCLE] {
                 pr_info!(logger, "circle");
                 dualsense_state[DualsenseState::CIRCLE] = true;
-                robot2_2_msg.md4 = if robot2_2_msg.md4 <= 0 {127} else {-128};
+                robot2_2_msg.md4 = if !p9n.pressed_cross() {127} else {-128};
                 let _ = robot2_2_publisher.send(&robot2_2_msg);
             }
             if !p9n.pressed_circle() && dualsense_state[DualsenseState::CIRCLE] {
