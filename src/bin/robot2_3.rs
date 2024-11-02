@@ -67,12 +67,32 @@ fn worker(
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
                 robot2_3_msg.md2 = if !p9n.pressed_cross() {25} else {125};
-                robot2_3_msg.md3 = if !p9n.pressed_cross() {0b00001111u8 as i8} else {0b11110000u8 as i8};
+                robot2_3_msg.md3 = if !p9n.pressed_cross() {0} else {3};
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
                 pr_info!(logger, "reverse up");
                 dualsense_state[DualsenseState::D_PAD_UP] = false;
+            }
+            if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT] {
+                pr_info!(logger, "left");
+                dualsense_state[DualsenseState::D_PAD_LEFT] = true;
+                robot2_3_msg.md3 = 1;
+                let _ = robot2_3_publisher.send(&robot2_3_msg);
+            }
+            if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
+                pr_info!(logger, "reverse left");
+                dualsense_state[DualsenseState::D_PAD_LEFT] = false;
+            }
+            if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT] {
+                pr_info!(logger, "right");
+                dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
+                robot2_3_msg.md3 = 2;
+                let _ = robot2_3_publisher.send(&robot2_3_msg);
+            }
+            if !p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
+                pr_info!(logger, "reverse right");
+                dualsense_state[DualsenseState::D_PAD_RIGHT] = false;
             }
             if p9n.pressed_l2() {
                 pr_info!(logger, "l2");
