@@ -77,7 +77,7 @@ fn worker(
             if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT] {
                 pr_info!(logger, "left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = true;
-                robot2_3_msg.md3 = 1;
+                robot2_3_msg.md3 = if !p9n.pressed_cross() {1} else {-1};;
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
@@ -87,7 +87,7 @@ fn worker(
             if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT] {
                 pr_info!(logger, "right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
-                robot2_3_msg.md3 = 2;
+                robot2_3_msg.md3 = if !p9n.pressed_cross() {2} else {-2};
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
