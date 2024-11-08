@@ -1,4 +1,10 @@
-use p9n_interface_2024::p9n_interface;
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+
+use drobo_interfaces::msg::PointDrive;
+use p9n_interface_2024::p9n_interface_kai;
 
 use safe_drive::{
     context::Context,
@@ -6,10 +12,8 @@ use safe_drive::{
     logger::Logger,
     msg::common_interfaces::sensor_msgs,
     pr_info,
-    selector::Selector,
     topic::{publisher::Publisher, subscriber::Subscriber},
 };
-use drobo_interfaces::msg::PointDrive;
 
 #[allow(non_snake_case)]
 pub mod DualsenseState {
@@ -41,113 +45,142 @@ fn set_arm_angle(arm_angle: &mut i32, target: i32) -> i8{
     return *arm_angle as i8;
 }
 
-fn main() -> Result<(), DynError> {
+#[async_std::main]
+async fn main() -> Result<(), DynError> {
     let ctx = Context::new()?;
     let node = ctx.create_node("p9n_robot2_2", None, Default::default())?;
 
-    let selector = ctx.create_selector()?;
     let subscriber = node.create_subscriber::<sensor_msgs::msg::Joy>("joy", None)?;
-
     let robot2_2_publisher = node.create_publisher::<PointDrive>("/point_2_2", None)?;
+    let logger = Logger::new("p9n_interface_2024");
 
-    worker(
-        selector,
-        subscriber,
-        robot2_2_publisher,
-    )?;
+    let pub_msg = Arc::new(Mutex::new(sensor_msgs::msg::Joy::new().unwrap()));
+    let sub_msg = pub_msg.clone();
+
+    let mut dualsense_state: [bool; 15] = [false; 15];
+    let mut robot2_2_msg = PointDrive::new().unwrap();
+    let mut arms_angle = [25, 25, 25, 25];
+
+    let task_pub = async_std::task::spawn(async move {
+        loop {
+            laborer(
+                &logger,
+                &mut dualsense_state,
+                &mut robot2_2_msg,
+                &mut arms_angle,
+                &robot2_2_publisher,
+                pub_msg.clone(),
+            );
+            async_std::task::sleep(Duration::from_millis(10)).await;
+        }
+    });
+    let task_sub = async_std::task::spawn(receiver(subscriber, sub_msg));
+
+    task_pub.await;
+    task_sub.await?;
+
     Ok(())
 }
 
-fn worker(
-    mut selector: Selector,
-    subscriber: Subscriber<sensor_msgs::msg::Joy>,
-    robot2_2_publisher: Publisher<PointDrive>,
+async fn receiver(
+    mut subscriber: Subscriber<sensor_msgs::msg::Joy>,
+    sub_msg: Arc<Mutex<sensor_msgs::msg::Joy>>,
 ) -> Result<(), DynError> {
-    let mut p9n = p9n_interface::PlaystationInterface::new(sensor_msgs::msg::Joy::new().unwrap());
-    let logger = Logger::new("p9n_interface_2024");
-    let mut dualsense_state: [bool; 15] = [false; 15];
-
-    let mut robot2_2_msg = PointDrive::new().unwrap();
-
-    let mut arm0_angle = 25;
-    let mut arm1_angle = 25;
-    let mut arm2_angle = 25;
-    let mut arm3_angle = 25;
-
-    selector.add_subscriber(
-        subscriber,
-        Box::new(move |_msg| {
-            p9n.set_joy_msg(_msg.get_owned().unwrap());
-
-            if p9n.pressed_l2() {
-                // pr_info!(logger, "L2");
-                dualsense_state[DualsenseState::L2] = true;
-                robot2_2_msg.md0 = set_arm_angle(&mut arm0_angle, if !p9n.pressed_cross() {1} else {-1}) as i16;
-                pr_info!(logger, "arm0_angle: {}", robot2_2_msg.md0);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            }
-            if !p9n.pressed_l2() && dualsense_state[DualsenseState::L2] {
-                // pr_info!(logger, "reverse L2");
-                dualsense_state[DualsenseState::L2] = false;
-                robot2_2_msg.md0 = set_arm_angle(&mut arm0_angle, 0) as i16;
-                pr_info!(logger, "arm0_angle: {}", robot2_2_msg.md0);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            }
-            if p9n.pressed_r2() {
-                // pr_info!(logger, "R2");
-                dualsense_state[DualsenseState::R2] = true;
-                robot2_2_msg.md1 = set_arm_angle(&mut arm1_angle, if !p9n.pressed_cross() {1} else {-1}) as i16;
-                pr_info!(logger, "arm1_angle: {}", robot2_2_msg.md1);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            } 
-            if !p9n.pressed_r2() && dualsense_state[DualsenseState::R2] {
-                // pr_info!(logger, "reverse R2");
-                dualsense_state[DualsenseState::R2] = false;
-                robot2_2_msg.md1 = set_arm_angle(&mut arm1_angle, 0) as i16;
-                pr_info!(logger, "arm1_angle: {}", robot2_2_msg.md1);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            }
-            if p9n.pressed_l1() {
-                // pr_info!(logger, "L1");
-                dualsense_state[DualsenseState::L1] = true;
-                robot2_2_msg.md2 = set_arm_angle(&mut arm2_angle, if !p9n.pressed_cross() {-1} else {1});
-                pr_info!(logger, "arm2_angle: {}", robot2_2_msg.md2);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            }
-            if !p9n.pressed_l1() && dualsense_state[DualsenseState::L1] {
-                // pr_info!(logger, "reverse L1");
-                dualsense_state[DualsenseState::L1] = false;
-                robot2_2_msg.md2 = set_arm_angle(&mut arm2_angle, 0);
-                pr_info!(logger, "arm2_angle: {}", robot2_2_msg.md2);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            } 
-            if p9n.pressed_r1() {
-                // pr_info!(logger, "R1");
-                dualsense_state[DualsenseState::R1] = true;
-                robot2_2_msg.md3 = set_arm_angle(&mut arm3_angle, if !p9n.pressed_cross() {1} else {-1});
-                pr_info!(logger, "arm3_angle: {}", robot2_2_msg.md3);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            } 
-            if !p9n.pressed_r1() && dualsense_state[DualsenseState::R1] {
-                pr_info!(logger, "reverse R1");
-                dualsense_state[DualsenseState::R1] = false;
-                robot2_2_msg.md3 = set_arm_angle(&mut arm3_angle, 0);
-                pr_info!(logger, "arm3_angle: {}", robot2_2_msg.md3);
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            }
-            if p9n.pressed_triangle() && !dualsense_state[DualsenseState::TRIANGLE] {
-                pr_info!(logger, "triangle");
-                dualsense_state[DualsenseState::TRIANGLE] = true;
-                robot2_2_msg.md5 = if !p9n.pressed_cross() {127} else {-128};
-                let _ = robot2_2_publisher.send(&robot2_2_msg);
-            }
-            if !p9n.pressed_triangle() && dualsense_state[DualsenseState::TRIANGLE] {
-                pr_info!(logger, "reverse triangle");
-                dualsense_state[DualsenseState::TRIANGLE] = false;
-            }
-        }),
-    );
     loop {
-        selector.wait()?;
+        let _msg = subscriber.recv().await?;
+        *sub_msg.lock().unwrap() = _msg.get_owned().unwrap();
+    }
+}
+
+fn laborer(
+    logger: &Logger,
+    dualsense_state: &mut [bool],
+    robot2_2_msg: &mut PointDrive,
+    arms_angle: &mut [i32],
+    robot2_2_publisher: &Publisher<PointDrive>,
+    sub_msg: Arc<Mutex<sensor_msgs::msg::Joy>>,
+) {
+    pr_info!(logger, "Wall!");
+    let binding = sub_msg.lock().unwrap();
+    let mut p9n = p9n_interface_kai::PlaystationInterface::new(&binding);
+    p9n.set_joy_msg(&binding);
+
+    if p9n.pressed_l2() {
+        // pr_info!(logger, "L2");
+        dualsense_state[DualsenseState::L2] = true;
+        robot2_2_msg.md0 = set_arm_angle(
+            &mut arms_angle[0],
+            if !p9n.pressed_cross() { 1 } else { -1 },
+        ) as i16;
+        pr_info!(logger, "arm0_angle: {}", robot2_2_msg.md0);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if !p9n.pressed_l2() && dualsense_state[DualsenseState::L2] {
+        // pr_info!(logger, "reverse L2");
+        dualsense_state[DualsenseState::L2] = false;
+        robot2_2_msg.md0 = set_arm_angle(&mut arms_angle[0], 0) as i16;
+        pr_info!(logger, "arm0_angle: {}", robot2_2_msg.md0);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if p9n.pressed_l1() {
+        // pr_info!(logger, "R2");
+        dualsense_state[DualsenseState::R2] = true;
+        robot2_2_msg.md1 = set_arm_angle(
+            &mut arms_angle[1],
+            if !p9n.pressed_cross() { -1 } else { 1 },
+        ) as i16;
+        pr_info!(logger, "arm1_angle: {}", robot2_2_msg.md1);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if !p9n.pressed_l1() && dualsense_state[DualsenseState::R2] {
+        // pr_info!(logger, "reverse R2");
+        dualsense_state[DualsenseState::R2] = false;
+        robot2_2_msg.md1 = set_arm_angle(&mut arms_angle[1], 0) as i16;
+        pr_info!(logger, "arm1_angle: {}", robot2_2_msg.md1);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if p9n.pressed_r2() {
+        // pr_info!(logger, "L1");
+        dualsense_state[DualsenseState::L1] = true;
+        robot2_2_msg.md2 = set_arm_angle(
+            &mut arms_angle[2],
+            if !p9n.pressed_cross() { -1 } else { 1 },
+        );
+        pr_info!(logger, "arm2_angle: {}", robot2_2_msg.md2);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if !p9n.pressed_r2() && dualsense_state[DualsenseState::L1] {
+        // pr_info!(logger, "reverse L1");
+        dualsense_state[DualsenseState::L1] = false;
+        robot2_2_msg.md2 = set_arm_angle(&mut arms_angle[2], 0);
+        pr_info!(logger, "arm2_angle: {}", robot2_2_msg.md2);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if p9n.pressed_r1() {
+        // pr_info!(logger, "R1");
+        dualsense_state[DualsenseState::R1] = true;
+        robot2_2_msg.md3 = set_arm_angle(
+            &mut arms_angle[3],
+            if !p9n.pressed_cross() { 1 } else { -1 },
+        );
+        pr_info!(logger, "arm3_angle: {}", robot2_2_msg.md3);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if !p9n.pressed_r1() && dualsense_state[DualsenseState::R1] {
+        pr_info!(logger, "reverse R1");
+        dualsense_state[DualsenseState::R1] = false;
+        robot2_2_msg.md3 = set_arm_angle(&mut arms_angle[3], 0);
+        pr_info!(logger, "arm3_angle: {}", robot2_2_msg.md3);
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if p9n.pressed_triangle() && !dualsense_state[DualsenseState::TRIANGLE] {
+        pr_info!(logger, "triangle");
+        dualsense_state[DualsenseState::TRIANGLE] = true;
+        robot2_2_msg.md5 = if !p9n.pressed_cross() { 127 } else { -128 };
+        let _ = robot2_2_publisher.send(&robot2_2_msg);
+    }
+    if !p9n.pressed_triangle() && dualsense_state[DualsenseState::TRIANGLE] {
+        pr_info!(logger, "reverse triangle");
+        dualsense_state[DualsenseState::TRIANGLE] = false;
     }
 }

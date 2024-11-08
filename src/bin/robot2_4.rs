@@ -1,5 +1,6 @@
 use p9n_interface_2024::p9n_interface;
 
+use drobo_interfaces::msg::PointDrive;
 use safe_drive::{
     context::Context,
     error::DynError,
@@ -9,7 +10,6 @@ use safe_drive::{
     selector::Selector,
     topic::{publisher::Publisher, subscriber::Subscriber},
 };
-use drobo_interfaces::msg::PointDrive;
 
 #[allow(non_snake_case)]
 pub mod DualsenseState {
@@ -39,11 +39,7 @@ fn main() -> Result<(), DynError> {
 
     let robot2_2_publisher = node.create_publisher::<PointDrive>("/point_2_4", None)?;
 
-    worker(
-        selector,
-        subscriber,
-        robot2_2_publisher,
-    )?;
+    worker(selector, subscriber, robot2_2_publisher)?;
     Ok(())
 }
 
@@ -69,13 +65,14 @@ fn worker(
             p9n.set_joy_msg(_msg.get_owned().unwrap());
             if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP] {
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
-                robot2_4_msg.md0 = if !p9n.pressed_cross() {125} else {80};
+                robot2_4_msg.md0 = if !p9n.pressed_cross() { 125 } else { 80 };
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
             if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
                 dualsense_state[DualsenseState::D_PAD_UP] = false;
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
+
             if p9n.pressed_l2() && !dualsense_state[DualsenseState::L2] {
                 dualsense_state[DualsenseState::L2] = true;
                 robot2_4_msg.md3 = 125;
@@ -83,9 +80,20 @@ fn worker(
             }
             if !p9n.pressed_l2() && dualsense_state[DualsenseState::L2] {
                 dualsense_state[DualsenseState::L2] = false;
+            }
+            if p9n.pressed_l1() && !dualsense_state[DualsenseState::L1] {
+                dualsense_state[DualsenseState::L1] = true;
+                robot2_4_msg.md3 = 25;
+                let _ = robot2_4_publisher.send(&robot2_4_msg);
+            }
+            if !p9n.pressed_l1() && dualsense_state[DualsenseState::L1] {
+                dualsense_state[DualsenseState::L1] = false;
+            }
+            if !dualsense_state[DualsenseState::L2] && !dualsense_state[DualsenseState::L1] {
                 robot2_4_msg.md3 = 80;
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
+
             if p9n.pressed_r2() && !dualsense_state[DualsenseState::R2] {
                 dualsense_state[DualsenseState::R2] = true;
                 robot2_4_msg.md1 = 25;
@@ -93,6 +101,16 @@ fn worker(
             }
             if !p9n.pressed_r2() && dualsense_state[DualsenseState::R2] {
                 dualsense_state[DualsenseState::R2] = false;
+            }
+            if p9n.pressed_r1() && !dualsense_state[DualsenseState::R1] {
+                dualsense_state[DualsenseState::R1] = true;
+                robot2_4_msg.md1 = 125;
+                let _ = robot2_4_publisher.send(&robot2_4_msg);
+            }
+            if !p9n.pressed_r1() && dualsense_state[DualsenseState::R1] {
+                dualsense_state[DualsenseState::R1] = false;
+            }
+            if !dualsense_state[DualsenseState::R2] && !dualsense_state[DualsenseState::R1] {
                 robot2_4_msg.md1 = 80;
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }

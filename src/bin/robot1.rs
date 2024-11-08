@@ -1,5 +1,6 @@
-use p9n_interface_2024::p9n_interface;
+use p9n_interface_2024::p9n_interface_kai;
 
+use drobo_interfaces::msg::{MdLibMsg, SdLibMsg, SmdLibMsg};
 use safe_drive::{
     context::Context,
     error::DynError,
@@ -9,7 +10,6 @@ use safe_drive::{
     selector::Selector,
     topic::{publisher::Publisher, subscriber::Subscriber},
 };
-use drobo_interfaces::msg::{MdLibMsg, SdLibMsg};
 
 #[allow(non_snake_case)]
 pub mod DualsenseState {
@@ -39,13 +39,9 @@ fn main() -> Result<(), DynError> {
 
     let md_publisher = node.create_publisher::<MdLibMsg>("/md_driver_topic", None)?;
     let sd_publisher = node.create_publisher::<SdLibMsg>("/sd_driver_topic", None)?;
+    let smd_smg = node.create_publisher::<SdLibMsg>("/smd_driver_topic", None)?;
 
-    worker(
-        selector,
-        subscriber,
-        md_publisher,
-        sd_publisher, 
-    )?;
+    worker(selector, subscriber, md_publisher, sd_publisher)?;
     Ok(())
 }
 
@@ -55,19 +51,20 @@ fn worker(
     md_publisher: Publisher<MdLibMsg>,
     sd_publisher: Publisher<SdLibMsg>,
 ) -> Result<(), DynError> {
-    let mut p9n = p9n_interface::PlaystationInterface::new(sensor_msgs::msg::Joy::new().unwrap());
     let logger = Logger::new("p9n_interface_2024");
     let mut dualsense_state: [bool; 15] = [false; 15];
-    
+
     let mut md_msg = MdLibMsg::new().unwrap();
     let mut sd_msg = SdLibMsg::new().unwrap();
+    let mut smd_smg = SdLibMsg::new().unwrap();
 
     let mut exhaust_solenoid_power = 0;
 
     selector.add_subscriber(
         subscriber,
         Box::new(move |_msg| {
-            p9n.set_joy_msg(_msg.get_owned().unwrap());
+            let mut p9n = p9n_interface_kai::PlaystationInterface::new(&_msg);
+            p9n.set_joy_msg(&_msg);
 
             if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT]{
                 pr_info!(logger, "left");
@@ -77,7 +74,7 @@ fn worker(
                 sd_msg.port = 0;
                 sd_msg.power1 = exhaust_solenoid_power;
                 let _ = sd_publisher.send(&sd_msg);
-            } 
+            }
             if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT]{
                 pr_info!(logger, "reverse left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = false;
@@ -89,7 +86,7 @@ fn worker(
                 sd_msg.port = 1;
                 sd_msg.power1 = 1000;
                 let _ = sd_publisher.send(&sd_msg);
-            } 
+            }
             if !p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
                 pr_info!(logger, "reverse right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = false;
@@ -101,7 +98,6 @@ fn worker(
                 exhaust_solenoid_power = 0;
                 sd_msg.power1 = exhaust_solenoid_power;
                 let _ = sd_publisher.send(&sd_msg);
-
             }
             if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP]{
                 pr_info!(logger, "up");

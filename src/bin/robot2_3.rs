@@ -1,5 +1,6 @@
-use p9n_interface_2024::p9n_interface;
+use p9n_interface_2024::p9n_interface_kai;
 
+use drobo_interfaces::msg::PointDrive;
 use safe_drive::{
     context::Context,
     error::DynError,
@@ -9,7 +10,6 @@ use safe_drive::{
     selector::Selector,
     topic::{publisher::Publisher, subscriber::Subscriber},
 };
-use drobo_interfaces::msg::PointDrive;
 
 #[allow(non_snake_case)]
 pub mod DualsenseState {
@@ -32,18 +32,14 @@ pub mod DualsenseState {
 
 fn main() -> Result<(), DynError> {
     let ctx = Context::new()?;
-    let node = ctx.create_node("p9n_robot1", None, Default::default())?;
+    let node = ctx.create_node("p9n_robot2_3", None, Default::default())?;
 
     let selector = ctx.create_selector()?;
     let subscriber = node.create_subscriber::<sensor_msgs::msg::Joy>("joy", None)?;
 
     let robot2_3_publisher = node.create_publisher::<PointDrive>("/point_2_3", None)?;
 
-    worker(
-        selector,
-        subscriber,
-        robot2_3_publisher,
-    )?;
+    worker(selector, subscriber, robot2_3_publisher)?;
     Ok(())
 }
 
@@ -52,7 +48,6 @@ fn worker(
     subscriber: Subscriber<sensor_msgs::msg::Joy>,
     robot2_3_publisher: Publisher<PointDrive>,
 ) -> Result<(), DynError> {
-    let mut p9n = p9n_interface::PlaystationInterface::new(sensor_msgs::msg::Joy::new().unwrap());
     let logger = Logger::new("p9n_interface_2024");
     let mut dualsense_state: [bool; 15] = [false; 15];
 
@@ -61,43 +56,55 @@ fn worker(
     selector.add_subscriber(
         subscriber,
         Box::new(move |_msg| {
-            p9n.set_joy_msg(_msg.get_owned().unwrap());
+            let mut p9n = p9n_interface_kai::PlaystationInterface::new(&_msg);
+            p9n.set_joy_msg(&_msg);
 
             if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP] {
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
-                robot2_3_msg.md2 = if !p9n.pressed_cross() {25} else {125};
-                robot2_3_msg.md3 = if !p9n.pressed_cross() {0} else {3};
+                robot2_3_msg.md2 = if !p9n.pressed_cross() { 25 } else { 125 };
+                robot2_3_msg.md3 = if !p9n.pressed_cross() { 0 } else { 3 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
                 pr_info!(logger, "reverse up");
                 dualsense_state[DualsenseState::D_PAD_UP] = false;
+                robot2_3_msg.md3 = 4;
+                let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
+
             if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT] {
                 pr_info!(logger, "left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = true;
-                robot2_3_msg.md3 = if !p9n.pressed_cross() {1} else {-1};;
+                robot2_3_msg.md3 = if !p9n.pressed_cross() { 1 } else { -1 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
                 pr_info!(logger, "reverse left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = false;
+                robot2_3_msg.md3 = 4;
+                let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
+
             if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT] {
                 pr_info!(logger, "right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
-                robot2_3_msg.md3 = if !p9n.pressed_cross() {2} else {-2};
+                robot2_3_msg.md3 = if !p9n.pressed_cross() { 2 } else { -2 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
                 pr_info!(logger, "reverse right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = false;
+                robot2_3_msg.md3 = 4;
+                let _ = robot2_3_publisher.send(&robot2_3_msg);
+
+
             }
+
             if p9n.pressed_l2() {
                 pr_info!(logger, "l2");
                 dualsense_state[DualsenseState::L2] = true;
-                robot2_3_msg.md4 = if !p9n.pressed_cross() {127} else {-128};
+                robot2_3_msg.md4 = if !p9n.pressed_cross() { 127 } else { -128 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_l2() && dualsense_state[DualsenseState::L2] {
@@ -109,7 +116,7 @@ fn worker(
             if p9n.pressed_r2() {
                 pr_info!(logger, "r2");
                 dualsense_state[DualsenseState::R2] = true;
-                robot2_3_msg.md5 = if !p9n.pressed_cross() {127} else {-128};
+                robot2_3_msg.md5 = if !p9n.pressed_cross() { 127 } else { -128 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_r2() && dualsense_state[DualsenseState::R2] {
@@ -117,7 +124,7 @@ fn worker(
                 dualsense_state[DualsenseState::R2] = false;
                 robot2_3_msg.md5 = 0;
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
-            }            
+            }
         }),
     );
     loop {

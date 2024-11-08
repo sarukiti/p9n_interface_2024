@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-std = { version = "1", features = ["attributes"] }
 safe_drive = "0.4"
 drobo_interfaces = { path = "/tmp/p9n_interface/drobo_interfaces" }
 
