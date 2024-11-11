@@ -1,5 +1,5 @@
 use p9n_interface_2024::p9n_interface_kai;
-
+use std::{thread, time};
 use drobo_interfaces::msg::{MdLibMsg, SdLibMsg, SmdLibMsg};
 use safe_drive::{
     context::Context,
@@ -39,9 +39,9 @@ fn main() -> Result<(), DynError> {
 
     let md_publisher = node.create_publisher::<MdLibMsg>("/md_driver_topic", None)?;
     let sd_publisher = node.create_publisher::<SdLibMsg>("/sd_driver_topic", None)?;
-    let smd_smg = node.create_publisher::<SdLibMsg>("/smd_driver_topic", None)?;
+    let smd_publisher = node.create_publisher::<SmdLibMsg>("/smd_driver_topic", None)?;
 
-    worker(selector, subscriber, md_publisher, sd_publisher)?;
+    worker(selector, subscriber, md_publisher, sd_publisher,smd_publisher)?;
     Ok(())
 }
 
@@ -50,13 +50,14 @@ fn worker(
     subscriber: Subscriber<sensor_msgs::msg::Joy>,
     md_publisher: Publisher<MdLibMsg>,
     sd_publisher: Publisher<SdLibMsg>,
+    smd_publisher: Publisher<SmdLibMsg>
 ) -> Result<(), DynError> {
     let logger = Logger::new("p9n_interface_2024");
     let mut dualsense_state: [bool; 15] = [false; 15];
 
     let mut md_msg = MdLibMsg::new().unwrap();
     let mut sd_msg = SdLibMsg::new().unwrap();
-    let mut smd_smg = SdLibMsg::new().unwrap();
+    let mut smd_msg = SmdLibMsg::new().unwrap();
 
     let mut exhaust_solenoid_power = 0;
 
@@ -99,25 +100,31 @@ fn worker(
                 sd_msg.power1 = exhaust_solenoid_power;
                 let _ = sd_publisher.send(&sd_msg);
             }
-            if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP]{
+
+
+            // 右側
+            // 　そのまま
+            if p9n.pressed_dpad_up(){
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
                 md_msg.address = 0x05;
-                md_msg.mode = 2;
-                md_msg.phase = p9n.pressed_cross();
+                md_msg.mode = 5;
+                md_msg.phase = false;
                 md_msg.power = 1000;
                 let _ = md_publisher.send(&md_msg);
             }
-            if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
-                pr_info!(logger, "reverse up");
-                dualsense_state[DualsenseState::D_PAD_UP] = false;
-                md_msg.address = 0x05;
-                md_msg.mode = 2;
-                md_msg.phase = false;
-                md_msg.power = 0;
-                let _ = md_publisher.send(&md_msg);
-            }
-            if p9n.pressed_dpad_down() && !dualsense_state[DualsenseState::D_PAD_DOWN]{
+            // if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
+            //     pr_info!(logger, "reverse up");
+            //     dualsense_state[DualsenseState::D_PAD_UP] = false;
+            //     md_msg.address = 0x05;
+            //     md_msg.mode = 2;
+            //     md_msg.phase = false;
+            //     md_msg.power = 0;
+            //     let _ = md_publisher.send(&md_msg);
+            // }
+
+            // そのまま
+            if p9n.pressed_dpad_down() &&!dualsense_state[DualsenseState::D_PAD_DOWN]{
                 pr_info!(logger, "down");
                 dualsense_state[DualsenseState::D_PAD_DOWN] = true;
                 sd_msg.address = 0x05;
@@ -133,6 +140,120 @@ fn worker(
                 sd_msg.power1 = 0;
                 let _ = sd_publisher.send(&sd_msg);
             }
+
+            // 左射出
+            if p9n.pressed_r1()&& p9n.pressed_triangle()&& !dualsense_state[DualsenseState::R1]{
+                pr_info!(logger, "r2_down");
+                dualsense_state[DualsenseState::R1] = true;
+
+                // サーボ開ける
+                smd_msg.address = 6;
+                smd_msg.port = 1;
+                smd_msg.mode=1;
+                smd_msg.angle=180;
+                let _ = smd_publisher.send(&smd_msg);
+
+                let millis = time::Duration::from_millis(1000);
+                thread::sleep(millis);
+
+                // mainバルブ
+                sd_msg.address = 0;
+                sd_msg.port = 1;
+                sd_msg.power1 = 1000;
+                let _ = sd_publisher.send(&sd_msg);
+
+                let millis = time::Duration::from_millis(500);
+                thread::sleep(millis);
+
+                sd_msg.address = 0;
+                sd_msg.port = 1;
+                sd_msg.power1 = 0;
+                let _ = sd_publisher.send(&sd_msg);
+
+                smd_msg.address = 6;
+                smd_msg.port = 1;
+                smd_msg.mode=1;
+                smd_msg.angle=90;
+                let _ = smd_publisher.send(&smd_msg);
+
+            }
+            if !p9n.pressed_r1() && dualsense_state[DualsenseState::R1] {
+                dualsense_state[DualsenseState::R1] = false;
+            }
+            // 左装填
+            if p9n.pressed_l1() && p9n.pressed_triangle() && !dualsense_state[DualsenseState::L1]{
+                pr_info!(logger, "down");
+                dualsense_state[DualsenseState::L1] = true;
+
+                smd_msg.address = 6;
+                smd_msg.port = 1;
+                smd_msg.mode=1;
+                smd_msg.angle=90;
+                let _ = smd_publisher.send(&smd_msg);
+
+                sd_msg.address = 1;
+                sd_msg.power1 = 1000;
+                sd_msg.address = 1;
+                sd_msg.power2 = 1000;
+                let _ = sd_publisher.send(&sd_msg);
+
+                let millis = time::Duration::from_millis(3000);
+                thread::sleep(millis);
+
+                sd_msg.address = 1;
+                sd_msg.power1 = 0;
+                sd_msg.address = 1;
+                sd_msg.power2 = 0;
+                let _ = sd_publisher.send(&sd_msg);
+
+            }
+            if !p9n.pressed_l1() && dualsense_state[DualsenseState::L1] {
+                // pr_info!(logger, "reverse down");
+                dualsense_state[DualsenseState::L1] = false;
+            }
+
+            // 左の射出2
+            if p9n.pressed_r2()&& p9n.pressed_triangle()&& !dualsense_state[DualsenseState::R2]{
+                pr_info!(logger, "r2_down");
+                dualsense_state[DualsenseState::R2] = true;
+
+                // サーボ開ける
+                smd_msg.address = 6;
+                smd_msg.port = 1;
+                smd_msg.mode=1;
+                smd_msg.angle=180;
+                let _ = smd_publisher.send(&smd_msg);
+
+                let millis = time::Duration::from_millis(400);
+                thread::sleep(millis);
+
+                smd_msg.address = 6;
+                smd_msg.port = 1;
+                smd_msg.mode=1;
+                smd_msg.angle=90;
+                let _ = smd_publisher.send(&smd_msg);
+
+                let millis = time::Duration::from_millis(600);
+                thread::sleep(millis);
+                // mainバルブ
+                sd_msg.address = 0;
+                sd_msg.port = 1;
+                sd_msg.power1 = 1000;
+                let _ = sd_publisher.send(&sd_msg);
+
+                let millis = time::Duration::from_millis(500);
+                thread::sleep(millis);
+
+                sd_msg.address = 0;
+                sd_msg.port = 1;
+                sd_msg.power1 = 0;
+                let _ = sd_publisher.send(&sd_msg);
+
+            }
+            if !p9n.pressed_r2() && dualsense_state[DualsenseState::R2] {
+                dualsense_state[DualsenseState::R2] = false;
+            }
+
         }),
     );
     loop {

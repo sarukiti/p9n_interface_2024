@@ -6,7 +6,6 @@ use safe_drive::{
     error::DynError,
     logger::Logger,
     msg::common_interfaces::sensor_msgs,
-    pr_info,
     selector::Selector,
     topic::{publisher::Publisher, subscriber::Subscriber},
 };
@@ -49,15 +48,13 @@ fn worker(
     robot2_4_publisher: Publisher<PointDrive>,
 ) -> Result<(), DynError> {
     let mut p9n = p9n_interface::PlaystationInterface::new(sensor_msgs::msg::Joy::new().unwrap());
+    #[allow(unused)]
     let logger = Logger::new("p9n_interface_2024");
     let mut dualsense_state: [bool; 15] = [false; 15];
 
     let mut robot2_4_msg = PointDrive::new().unwrap();
 
-    let mut arm0_angle = 25;
-    let mut arm1_angle = 25;
-    let mut arm2_angle = 25;
-    let mut arm3_angle = 25;
+
 
     selector.add_subscriber(
         subscriber,
@@ -83,13 +80,22 @@ fn worker(
             }
             if p9n.pressed_l1() && !dualsense_state[DualsenseState::L1] {
                 dualsense_state[DualsenseState::L1] = true;
-                robot2_4_msg.md3 = 25;
+                robot2_4_msg.md3 = 102;
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
             if !p9n.pressed_l1() && dualsense_state[DualsenseState::L1] {
                 dualsense_state[DualsenseState::L1] = false;
             }
-            if !dualsense_state[DualsenseState::L2] && !dualsense_state[DualsenseState::L1] {
+            if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT] {
+                dualsense_state[DualsenseState::D_PAD_LEFT] = true;
+                robot2_4_msg.md3 = 25;
+                let _ = robot2_4_publisher.send(&robot2_4_msg);
+            }
+            if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
+                dualsense_state[DualsenseState::D_PAD_LEFT] = false;
+            }
+
+            if !dualsense_state[DualsenseState::L2] && !dualsense_state[DualsenseState::L1] && !dualsense_state[DualsenseState::D_PAD_LEFT]  {
                 robot2_4_msg.md3 = 80;
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
@@ -104,14 +110,29 @@ fn worker(
             }
             if p9n.pressed_r1() && !dualsense_state[DualsenseState::R1] {
                 dualsense_state[DualsenseState::R1] = true;
-                robot2_4_msg.md1 = 125;
+                robot2_4_msg.md1 = 42;
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
             if !p9n.pressed_r1() && dualsense_state[DualsenseState::R1] {
                 dualsense_state[DualsenseState::R1] = false;
             }
-            if !dualsense_state[DualsenseState::R2] && !dualsense_state[DualsenseState::R1] {
-                robot2_4_msg.md1 = 80;
+
+            if p9n.pressed_circle() && !dualsense_state[DualsenseState::CIRCLE] {
+                dualsense_state[DualsenseState::CIRCLE] = true;
+                // robot2_4_msg.md1 = 52;
+                robot2_4_msg.md1 = 125;
+
+                let _ = robot2_4_publisher.send(&robot2_4_msg);
+            }
+            if !p9n.pressed_circle() && dualsense_state[DualsenseState::CIRCLE] {
+                dualsense_state[DualsenseState::CIRCLE] = false;
+            }
+            
+            
+            if !dualsense_state[DualsenseState::R2] && !dualsense_state[DualsenseState::R1] && !dualsense_state[DualsenseState::CIRCLE]  {
+                // robot2_4_msg.md1 = 80;
+                robot2_4_msg.md1 =70;
+
                 let _ = robot2_4_publisher.send(&robot2_4_msg);
             }
         }),

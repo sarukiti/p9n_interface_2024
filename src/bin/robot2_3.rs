@@ -104,7 +104,7 @@ fn worker(
             if p9n.pressed_l2() {
                 pr_info!(logger, "l2");
                 dualsense_state[DualsenseState::L2] = true;
-                robot2_3_msg.md4 = if !p9n.pressed_cross() { 127 } else { -128 };
+                robot2_3_msg.md4 = if !p9n.pressed_cross() { 101} else { -101 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_l2() && dualsense_state[DualsenseState::L2] {
@@ -116,7 +116,7 @@ fn worker(
             if p9n.pressed_r2() {
                 pr_info!(logger, "r2");
                 dualsense_state[DualsenseState::R2] = true;
-                robot2_3_msg.md5 = if !p9n.pressed_cross() { 127 } else { -128 };
+                robot2_3_msg.md5 = if !p9n.pressed_cross() { 101 } else { -101};
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_r2() && dualsense_state[DualsenseState::R2] {
