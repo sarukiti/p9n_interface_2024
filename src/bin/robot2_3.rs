@@ -30,6 +30,17 @@ pub mod DualsenseState {
     pub const PS: usize = 14;
 }
 
+fn set_arm_angle(arm_angle: &mut i32, target: i32) -> i8{
+    if (*arm_angle + target) > 125 {
+        *arm_angle = 125;
+    } else if (*arm_angle + target) < 25 {
+        *arm_angle = 25;
+    } else {
+        *arm_angle += target;
+    }
+    return *arm_angle as i8;
+}
+
 fn main() -> Result<(), DynError> {
     let ctx = Context::new()?;
     let node = ctx.create_node("p9n_robot2_3", None, Default::default())?;
@@ -50,6 +61,7 @@ fn worker(
 ) -> Result<(), DynError> {
     let logger = Logger::new("p9n_interface_2024");
     let mut dualsense_state: [bool; 15] = [false; 15];
+    let mut arm_angle = 25;
 
     let mut robot2_3_msg = PointDrive::new().unwrap();
 
@@ -63,33 +75,45 @@ fn worker(
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
                 robot2_3_msg.md2 = if !p9n.pressed_cross() { 25 } else { 125 };
-                robot2_3_msg.md3 = if !p9n.pressed_cross() { 0 } else { 3 };
+                robot2_3_msg.md3 = if !p9n.pressed_cross() { 40 } else { 120 };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
                 pr_info!(logger, "reverse up");
                 dualsense_state[DualsenseState::D_PAD_UP] = false;
-                robot2_3_msg.md3 = 4;
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
 
             if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT] {
                 pr_info!(logger, "left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = true;
-                robot2_3_msg.md3 = if !p9n.pressed_cross() { 1 } else { -1 };
+                //let target = 55 -arm_angle;
+                //robot2_3_msg.md3 = set_arm_angle(&mut arm_angle, target);
+                //let _ = robot2_3_publisher.send(&robot2_3_msg);
+            }
+            if p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
+                pr_info!(logger, "left");
+                dualsense_state[DualsenseState::D_PAD_LEFT] = true;
+                robot2_3_msg.md3 = if !p9n.pressed_cross() { set_arm_angle(&mut arm_angle, 1) } else { set_arm_angle(&mut arm_angle, 1) };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT] {
                 pr_info!(logger, "reverse left");
                 dualsense_state[DualsenseState::D_PAD_LEFT] = false;
-                robot2_3_msg.md3 = 4;
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
 
             if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT] {
                 pr_info!(logger, "right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
-                robot2_3_msg.md3 = if !p9n.pressed_cross() { 2 } else { -2 };
+                //let target = 75 - arm_angle;
+                //robot2_3_msg.md3 = set_arm_angle(&mut arm_angle, target);
+                //let _ = robot2_3_publisher.send(&robot2_3_msg);
+            }
+            if p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
+                pr_info!(logger, "left");
+                dualsense_state[DualsenseState::D_PAD_LEFT] = true;
+                robot2_3_msg.md3 = if !p9n.pressed_cross() { set_arm_angle(&mut arm_angle, -1) } else { set_arm_angle(&mut arm_angle, -1) };
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
@@ -97,8 +121,6 @@ fn worker(
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = false;
                 robot2_3_msg.md3 = 4;
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
-
-
             }
 
             if p9n.pressed_l2() {
