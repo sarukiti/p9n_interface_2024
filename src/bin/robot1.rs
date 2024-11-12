@@ -5,7 +5,7 @@ use safe_drive::{
     context::Context,
     error::DynError,
     logger::Logger,
-    msg::common_interfaces::sensor_msgs,
+    msg::common_interfaces::{sensor_msgs, geometry_msgs},
     pr_info,
     selector::Selector,
     topic::{publisher::Publisher, subscriber::Subscriber},
@@ -40,8 +40,9 @@ fn main() -> Result<(), DynError> {
     let md_publisher = node.create_publisher::<MdLibMsg>("/md_driver_topic", None)?;
     let sd_publisher = node.create_publisher::<SdLibMsg>("/sd_driver_topic", None)?;
     let smd_publisher = node.create_publisher::<SmdLibMsg>("/smd_driver_topic", None)?;
+    let pose_publisher = node.create_publisher::<geometry_msgs::msg::Vector3>("goal_pose", None)?;
 
-    worker(selector, subscriber, md_publisher, sd_publisher,smd_publisher)?;
+    worker(selector, subscriber, md_publisher, sd_publisher, smd_publisher, pose_publisher)?;
     Ok(())
 }
 
@@ -50,7 +51,8 @@ fn worker(
     subscriber: Subscriber<sensor_msgs::msg::Joy>,
     md_publisher: Publisher<MdLibMsg>,
     sd_publisher: Publisher<SdLibMsg>,
-    smd_publisher: Publisher<SmdLibMsg>
+    smd_publisher: Publisher<SmdLibMsg>,
+    pose_publisher: Publisher<geometry_msgs::msg::Vector3>
 ) -> Result<(), DynError> {
     let logger = Logger::new("p9n_interface_2024");
     let mut dualsense_state: [bool; 15] = [false; 15];
@@ -58,6 +60,26 @@ fn worker(
     let mut md_msg = MdLibMsg::new().unwrap();
     let mut sd_msg = SdLibMsg::new().unwrap();
     let mut smd_msg = SmdLibMsg::new().unwrap();
+    let origin_left_pose_msg = geometry_msgs::msg::Vector3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let origin_right_pose_msg = geometry_msgs::msg::Vector3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let robot2_1_pose_msg = geometry_msgs::msg::Vector3 {
+        x: 1.0,
+        y: -1.0,
+        z: 0.0,
+    };
+    let robot2_3_pose_msg = geometry_msgs::msg::Vector3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
 
     let mut exhaust_solenoid_power = 0;
 
@@ -67,19 +89,43 @@ fn worker(
             let mut p9n = p9n_interface_kai::PlaystationInterface::new(&_msg);
             p9n.set_joy_msg(&_msg);
 
-            if p9n.pressed_dpad_left() && !dualsense_state[DualsenseState::D_PAD_LEFT]{
-                pr_info!(logger, "left");
-                dualsense_state[DualsenseState::D_PAD_LEFT] = true;
-                exhaust_solenoid_power = if exhaust_solenoid_power == 0 {1000} else {0};
-                sd_msg.address = 0x00;
-                sd_msg.port = 0;
-                sd_msg.power1 = exhaust_solenoid_power;
-                let _ = sd_publisher.send(&sd_msg);
+            if p9n.pressed_start() && !dualsense_state[DualsenseState::START]{
+                pr_info!(logger, "start");
+                dualsense_state[DualsenseState::START] = true;
+                let _ = pose_publisher.send(&robot2_1_pose_msg);
             }
-            if !p9n.pressed_dpad_left() && dualsense_state[DualsenseState::D_PAD_LEFT]{
-                pr_info!(logger, "reverse left");
-                dualsense_state[DualsenseState::D_PAD_LEFT] = false;
+            if !p9n.pressed_start() && dualsense_state[DualsenseState::START]{
+                pr_info!(logger, "reverse start");
+                dualsense_state[DualsenseState::START] = false;
             }
+            if p9n.pressed_cross() && !dualsense_state[DualsenseState::CROSS]{
+                pr_info!(logger, "cross");
+                dualsense_state[DualsenseState::CROSS] = true;
+                let _ = pose_publisher.send(&origin_right_pose_msg);
+            }
+            if !p9n.pressed_cross() && dualsense_state[DualsenseState::CROSS]{
+                pr_info!(logger, "reverse cross");
+                dualsense_state[DualsenseState::CROSS] = false;
+            }
+            if p9n.pressed_circle() && !dualsense_state[DualsenseState::CIRCLE]{
+                pr_info!(logger, "circle");
+                dualsense_state[DualsenseState::CIRCLE] = true;
+                let _ = pose_publisher.send(&robot2_1_pose_msg);
+            }
+            if !p9n.pressed_circle() && dualsense_state[DualsenseState::CIRCLE]{
+                pr_info!(logger, "reverse circle");
+                dualsense_state[DualsenseState::CIRCLE] = false;
+            }
+            if p9n.pressed_square() && !dualsense_state[DualsenseState::SQUARE]{
+                pr_info!(logger, "square");
+                dualsense_state[DualsenseState::SQUARE] = true;
+                let _ = pose_publisher.send(&origin_left_pose_msg);
+            }
+            if !p9n.pressed_square() && dualsense_state[DualsenseState::SQUARE]{
+                pr_info!(logger, "reverse square");
+                dualsense_state[DualsenseState::SQUARE] = false;
+            }
+
             if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT]{
                 pr_info!(logger, "right");
                 dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
