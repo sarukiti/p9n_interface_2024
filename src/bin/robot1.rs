@@ -40,7 +40,7 @@ fn main() -> Result<(), DynError> {
     let md_publisher = node.create_publisher::<MdLibMsg>("/md_driver_topic", None)?;
     let sd_publisher = node.create_publisher::<SdLibMsg>("/sd_driver_topic", None)?;
     let smd_publisher = node.create_publisher::<SmdLibMsg>("/smd_driver_topic", None)?;
-    let pose_publisher = node.create_publisher::<geometry_msgs::msg::Vector3>("goal_pose", None)?;
+    let pose_publisher = node.create_publisher::<geometry_msgs::msg::Vector3>("goal_pose_d", None)?;
 
     worker(selector, subscriber, md_publisher, sd_publisher, smd_publisher, pose_publisher)?;
     Ok(())
