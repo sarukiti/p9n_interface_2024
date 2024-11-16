@@ -75,7 +75,8 @@ fn worker(
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
                 robot2_3_msg.md2 = if !p9n.pressed_cross() { 25 } else { 125 };
-                robot2_3_msg.md3 = if !p9n.pressed_cross() { 40 } else { 120 };
+                let target = if !p9n.pressed_cross() {40 - arm_angle} else {120 - arm_angle};
+                robot2_3_msg.md3 = set_arm_angle(&mut arm_angle, target);
                 let _ = robot2_3_publisher.send(&robot2_3_msg);
             }
             if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {

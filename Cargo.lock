@@ -173,6 +173,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "builtin_interfaces"
+version = "0.2.1"
+dependencies = [
+ "safe_drive",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -216,6 +223,7 @@ dependencies = [
 name = "drobo_interfaces"
 version = "0.2.1"
 dependencies = [
+ "geometry_msgs",
  "safe_drive",
 ]
 
@@ -362,6 +370,14 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
+]
+
+[[package]]
+name = "geometry_msgs"
+version = "0.2.1"
+dependencies = [
+ "safe_drive",
+ "std_msgs",
 ]
 
 [[package]]
@@ -687,6 +703,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "942b4a808e05215192e39f4ab80813e599068285906cc91aa64f923db842bd5a"
 
 [[package]]
+name = "std_msgs"
+version = "0.2.1"
+dependencies = [
+ "builtin_interfaces",
+ "safe_drive",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -951,3 +975,15 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[patch.unused]]
+name = "allocator_2024b"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "differential_two_wheel_control"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "p9n_interface_2024"
+version = "0.1.0"

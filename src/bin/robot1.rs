@@ -125,55 +125,31 @@ fn worker(
                 pr_info!(logger, "reverse square");
                 dualsense_state[DualsenseState::SQUARE] = false;
             }
-
-            if p9n.pressed_dpad_right() && !dualsense_state[DualsenseState::D_PAD_RIGHT]{
-                pr_info!(logger, "right");
-                dualsense_state[DualsenseState::D_PAD_RIGHT] = true;
-                sd_msg.address = 0x00;
-                sd_msg.port = 1;
-                sd_msg.power1 = 1000;
-                let _ = sd_publisher.send(&sd_msg);
-            }
-            if !p9n.pressed_dpad_right() && dualsense_state[DualsenseState::D_PAD_RIGHT] {
-                pr_info!(logger, "reverse right");
-                dualsense_state[DualsenseState::D_PAD_RIGHT] = false;
-                sd_msg.address = 0x00;
-                sd_msg.port = 1;
-                sd_msg.power1 = 0;
-                let _ = sd_publisher.send(&sd_msg);
-                sd_msg.port = 0;
-                exhaust_solenoid_power = 0;
-                sd_msg.power1 = exhaust_solenoid_power;
-                let _ = sd_publisher.send(&sd_msg);
-            }
-
-
             // 右側
-            // 　そのまま
-            if p9n.pressed_dpad_up(){
+            // そのまま
+            if p9n.pressed_dpad_up() && !dualsense_state[DualsenseState::D_PAD_UP]{
                 pr_info!(logger, "up");
                 dualsense_state[DualsenseState::D_PAD_UP] = true;
                 md_msg.address = 0x05;
                 md_msg.mode = 5;
-                md_msg.phase = false;
                 md_msg.power = 1000;
+                md_msg.after_power = 200;
                 let _ = md_publisher.send(&md_msg);
             }
-            // if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
-            //     pr_info!(logger, "reverse up");
-            //     dualsense_state[DualsenseState::D_PAD_UP] = false;
-            //     md_msg.address = 0x05;
-            //     md_msg.mode = 2;
-            //     md_msg.phase = false;
-            //     md_msg.power = 0;
-            //     let _ = md_publisher.send(&md_msg);
-            // }
+            if !p9n.pressed_dpad_up() && dualsense_state[DualsenseState::D_PAD_UP] {
+                pr_info!(logger, "reverse up");
+                dualsense_state[DualsenseState::D_PAD_UP] = false;
+                md_msg.address = 0x05;
+                md_msg.mode = 2;
+                md_msg.power = 200;
+                let _ = md_publisher.send(&md_msg);
+            }
 
             // そのまま
             if p9n.pressed_dpad_down() &&!dualsense_state[DualsenseState::D_PAD_DOWN]{
                 pr_info!(logger, "down");
                 dualsense_state[DualsenseState::D_PAD_DOWN] = true;
-                sd_msg.address = 0x05;
+                sd_msg.address = 0x10;
                 sd_msg.port = 0;
                 sd_msg.power1 = 1000;
                 let _ = sd_publisher.send(&sd_msg);
@@ -181,7 +157,7 @@ fn worker(
             if !p9n.pressed_dpad_down() && dualsense_state[DualsenseState::D_PAD_DOWN] {
                 pr_info!(logger, "reverse down");
                 dualsense_state[DualsenseState::D_PAD_DOWN] = false;
-                sd_msg.address = 0x05;
+                sd_msg.address = 0x10;
                 sd_msg.port = 0;
                 sd_msg.power1 = 0;
                 let _ = sd_publisher.send(&sd_msg);
@@ -238,18 +214,24 @@ fn worker(
                 let _ = smd_publisher.send(&smd_msg);
 
                 sd_msg.address = 1;
+                sd_msg.port = 0;
                 sd_msg.power1 = 1000;
+                let _ = sd_publisher.send(&sd_msg);
                 sd_msg.address = 1;
-                sd_msg.power2 = 1000;
+                sd_msg.port = 1;
+                sd_msg.power1 = 1000;
                 let _ = sd_publisher.send(&sd_msg);
 
                 let millis = time::Duration::from_millis(3000);
                 thread::sleep(millis);
 
                 sd_msg.address = 1;
+                sd_msg.port = 0;
                 sd_msg.power1 = 0;
+                let _ = sd_publisher.send(&sd_msg);
                 sd_msg.address = 1;
-                sd_msg.power2 = 0;
+                sd_msg.port = 1;
+                sd_msg.power1 = 0;
                 let _ = sd_publisher.send(&sd_msg);
 
             }
